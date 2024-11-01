@@ -62,7 +62,7 @@ class CroppedImagesView(qtw.QWidget):
 
     def initUi(self) -> None:
         self.setFixedSize(qtc.QSize(100*len(self.images), 400))
-        if len(self.images) // 3 == 0:
+        if len(self.images) % 3 == 0:
             ncols = min(len(self.images), 3)
             nrows = (len(self.images) + ncols - 1) // ncols
         else:
