@@ -35,7 +35,7 @@ class AutocropFileViewer(qtw.QWidget):
 
         self.tree = qtw.QTreeWidget()
         self.tree.setColumnCount(2)
-        self.tree.setHeaderLabels(["image", "saved"])
+        self.tree.setHeaderLabels(["image", "viewed"])
 
         self.tree.itemDoubleClicked.connect(
             self.on_item_click
@@ -74,6 +74,7 @@ class AutocropFileViewer(qtw.QWidget):
     def on_item_click(self, item: qtw.QTreeWidgetItem, column: int) -> None: 
         image_path = item.data(0, qtc.Qt.UserRole)
         if image_path:
+            item.setText(1, "yes")
             image = load_img_array(image_path)
             self.crop_window = CropWindow(image, item.text(0), self.params)
             self.crop_window.show()
@@ -87,7 +88,7 @@ class AutocropFileViewer(qtw.QWidget):
             image_name = Path(image_path).stem.strip()
 
             try:
-                item = qtw.QTreeWidgetItem([image_name, ""])
+                item = qtw.QTreeWidgetItem([image_name, "no"])
                 item.setData(0, qtc.Qt.UserRole, image_path)
                 self.tree.addTopLevelItem(item)
             except Exception as e:
