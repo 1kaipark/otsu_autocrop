@@ -13,8 +13,6 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("QtAgg")
 
-img = load_img_array("slide15.tif")
-
 
 class AutocropFileViewer(qtw.QWidget):
     def __init__(self) -> None:
