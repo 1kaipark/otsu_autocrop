@@ -105,7 +105,7 @@ class CroppedImagesView(qtw.QWidget):
         else:
             for i, ax in enumerate(self.canvas.ax.flat):
                 ax.imshow(self.images[i])
-                ax.set_title(f"section_{str(i).zfill(3)}")  # zfill to pad with zeros
+                ax.set_title(f"section_{str(i+1).zfill(3)}")  # zfill to pad with zeros
         self.canvas.draw()
 
     def rotate_images(self) -> None:
@@ -128,7 +128,7 @@ class CroppedImagesView(qtw.QWidget):
         try:
             for i, img in enumerate(self.images):
                 fname = os.path.join(
-                    save_dir, f"{self.title}_section_{str(i).zfill(3)}.png"
+                    save_dir, f"{self.title}_section_{str(i+1 ).zfill(3)}.png"
                 )
                 img = Image.fromarray(img)
                 img.save(fname)

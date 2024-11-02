@@ -81,7 +81,7 @@ class AutocropFileViewer(qtw.QWidget):
 
     def load_images(self) -> None:
         self.image_paths, _ = qtw.QFileDialog.getOpenFileNames(
-            self, "select slide images", "", "images (*.jpg *.png, *.tif)"
+            self, "select slide images", "", "images (*.jpg *.png *.tif)"
         )
         print(self.image_paths)
         for image_path in self.image_paths:
@@ -95,7 +95,10 @@ class AutocropFileViewer(qtw.QWidget):
                 info_box(self, "error: {}".format(str(e)))
     def clear_images(self) -> None:
         # modal to confirm??
-        ...
+        if len(self.image_paths) > 0:
+            if prompt_yes_no(self, "this will clear all images.", "are you sure?"):
+                self.tree.clear()
+                self.image_paths = []
 
     def open_settings(self) -> None: ...
 
