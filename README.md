@@ -26,8 +26,22 @@ python otsu_autocrop.py
 * Once the section view has opened, if desired, click "rotate" for a 90-degree clockwise rotation. Then, hit "save images" and browse to a directory of your choice to write the images to disk.
 * Repeat for remaining images.
 
+# ALGORITHM DETAILS
+* Images are first padded with 400 pixels of the mean pixel value to prevent index labels from going off-screen. Then, images are converted to greyscale and are fed through the following pipeline:
+  * Gaussian blur for noise reduction
+  * Otsu's thresholding algorithm -- in short, thresholds along a single intensity value that maximizes intra-class intensity variance
+  * Morphological dilation, to fill any gaps or holes, followed by erosion, to restore the original bounds
+  * OpenCV2's contour detection, then simplification via a convex hull, and finally a bounding rectangle around each hull
+  * The identified rectangles are then sorted by area and the largest 10 are kept.
+* `params.json` contains the parameters for various steps in the algorithm that may be important for customization:
+  * `blur_kernel_dim`: the size (nxn) of the Gaussian blur kernel
+  * `morphological_iterations`: number of iterations for erosion and dilation
+  * `morph_kernel_dim`: the size (nxn) of the kernels used for erosion and dilation
+  * `thresh`: chosen arbitrarily as a starting point as the Otsu method algorithm finds an ideal value in an unsupervised fashion
+  * `pad`: number of pixels to pad each identified rectangle with. For low-contrast images, increasing may help.
 
 # TODO:
-* show saved files in file dialog, have better handling for overwrites
+* better handling for overwrites
+* expand params
 * not implemented:
   * settings panel for editing params.json (you can do this manually if need be)
