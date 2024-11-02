@@ -29,8 +29,8 @@ python otsu_autocrop.py
 # ALGORITHM DETAILS
 * Images are first padded with 400 pixels of the mean pixel value to prevent index labels from going off-screen. Then, images are converted to greyscale and are fed through the following pipeline:
   * Gaussian blur for noise reduction
+  * Morphological dilation, to fill any gaps or holes, followed by erosion, to restore the original bounds (further noise reduction)
   * Otsu's thresholding algorithm -- in short, thresholds along a single intensity value that maximizes intra-class intensity variance
-  * Morphological dilation, to fill any gaps or holes, followed by erosion, to restore the original bounds
   * OpenCV2's contour detection, then simplification via a convex hull, and finally a bounding rectangle around each hull
   * The identified rectangles are then sorted by area and the largest 10 are kept.
 * `params.json` contains the parameters for various steps in the algorithm that may be important for customization:
