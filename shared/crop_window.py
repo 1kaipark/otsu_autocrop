@@ -142,7 +142,7 @@ class CropWindow(qtw.QWidget):
     def __init__(self, image: np.array, title: str = "", params: dict = DEFAULT_PARAMS):
         super().__init__()
         # self.image = image
-        self.image = np.pad(image, pad_width = [(400, 400), (400, 400), (0, 0)], mode='constant') # pad image to avoid overflow
+        self.image = np.pad(image, pad_width = [(400, 400), (400, 400), (0, 0)], mode='mean') # pad image to avoid overflow, intuitively padding with mean value will work best with Otsu's
 
         self.title = title
         self.params = params
