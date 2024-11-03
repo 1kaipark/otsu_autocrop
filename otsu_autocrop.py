@@ -28,7 +28,7 @@ class AutocropFileViewer(qtw.QWidget):
 
         # for closeEvent
         self.settings_panel = None
-        self.crop_window = None
+        self.crop_window = None 
 
     def initUi(self) -> None:
         self.setFixedSize(qtc.QSize(400, 200))
@@ -112,3 +112,4 @@ if __name__ == "__main__":
     w = AutocropFileViewer()
     w.show()
     sys.exit(app.exec())
+
