@@ -1,1 +1,1 @@
-{"blur_kernel_dim": 7, "morphological_iterations": 8, "morph_kernel_dim": 6, "thresh": 0, "pad": 100}
+{"blur_kernel_dim": 7, "morphological_iterations": 8, "morph_kernel_dim": 6, "thresh": 0, "pad": 100, "n_sections": 6}

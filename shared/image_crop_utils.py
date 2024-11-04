@@ -77,7 +77,7 @@ def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLi
     contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     # take the 10 largest contours -- never gonna have more than 10 sections per slide
-    contours = sorted(contours, key=cv.contourArea, reverse=True)[:10]
+    contours = sorted(contours, key=cv.contourArea, reverse=True)[:params["n_sections"]]
     # I love list comprehension
     hulls: list["MatLike"] = [cv.convexHull(c) for c in contours]
 
