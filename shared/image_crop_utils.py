@@ -98,7 +98,7 @@ def draw_rects(src: np.ndarray, rects: list[tuple[int, int, int, int]], params: 
         cv.rectangle(
             img=bg,
             pt1=(rect[0], rect[1]),
-            pt2=(rect[2] + params["pad"], rect[3] + params["pad"]),
+            pt2=(rect[2], rect[3]),
             color=color,
             thickness=4,
             lineType=cv.LINE_AA,
