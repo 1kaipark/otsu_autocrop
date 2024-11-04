@@ -1,8 +1,11 @@
+from typing import Iterable
 import cv2 as cv
 import numpy as np
 from PIL import Image
 
 from cv2.typing import MatLike, Rect
+
+from .colors import ColorGenerator
 
 params: dict = {
     "blur_kernel_dim": 7,
@@ -88,14 +91,17 @@ def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLi
 def draw_rects(src: np.ndarray, rects: list[tuple[int, int, int, int]], params: dict):
     """this method should take a source image and superimpose rects with their corresponding indices onto it"""
     bg = src.copy()  # for read only
+    cg = ColorGenerator() # yields colors
+
     for i, rect in enumerate(rects):
+        color = next(iter(cg))
         cv.rectangle(
-            bg,
-            (rect[0], rect[1]),
-            (rect[2] + params["pad"], rect[3] + params["pad"]),
-            (255, 0, 255),
-            4,
-            cv.LINE_AA,
+            img=bg,
+            pt1=(rect[0], rect[1]),
+            pt2=(rect[2] + params["pad"], rect[3] + params["pad"]),
+            color=color,
+            thickness=4,
+            lineType=cv.LINE_AA,
         )
 
         cv.putText(
@@ -104,7 +110,7 @@ def draw_rects(src: np.ndarray, rects: list[tuple[int, int, int, int]], params: 
             org=(rect[0] - 10, rect[1] - 10),
             fontFace=cv.FONT_ITALIC,
             fontScale=5,
-            color=(255, 255, 255),
+            color=color,
             thickness=5,
             lineType=2,
         )

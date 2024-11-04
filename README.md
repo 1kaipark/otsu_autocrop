@@ -43,5 +43,3 @@ python otsu_autocrop.py
 # TODO:
 * better handling for overwrites
 * expand params
-* not implemented:
-  * settings panel for editing params.json (you can do this manually if need be)
