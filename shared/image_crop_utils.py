@@ -48,7 +48,7 @@ def dilate(img: np.ndarray, iterations: int = 2, kernel_size: int = 3) -> np.nda
     return img
 
 
-def generate_crop_rects(image: np.array, params: dict = params) -> list["MatLike"]:
+def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLike"]:
     blank: np.ndarray = image.copy()
     image = cv.cvtColor(image, cv.COLOR_RGB2GRAY)
     image = cv.GaussianBlur(
@@ -85,9 +85,9 @@ def generate_crop_rects(image: np.array, params: dict = params) -> list["MatLike
     return rects
 
 
-def draw_rects(src, rects, params):
-    bg = src.copy()  # for read only
+def draw_rects(src: np.ndarray, rects: list[tuple[int, int, int, int]], params: dict):
     """this method should take a source image and superimpose rects with their corresponding indices onto it"""
+    bg = src.copy()  # for read only
     for i, rect in enumerate(rects):
         cv.rectangle(
             bg,
@@ -120,10 +120,11 @@ def crop_rect(image: np.array, rect: tuple[int, int, int, int]) -> np.array:
 
 
 def get_cropped_images(
-    src: np.array,
+    src: np.ndarray,
     idxs: list[int],
     rects: list[tuple[int, int, int, int]],
-) -> list[np.array]:
+) -> list[np.ndarray]:
+    """provided a list of indices and bounding rects, crop the source image"""
     selected = [rects[n] for n in idxs]
     cropped = [crop_rect(src, rect) for rect in selected]
     return cropped

@@ -140,21 +140,28 @@ class CroppedImagesView(qtw.QWidget):
 
 class CropWindow(qtw.QWidget):
     def __init__(self, image: np.array, title: str = "", params: dict = DEFAULT_PARAMS):
+        """
+        main crop window, with image display, buttons to apply algorithm and crop sections
+        ----
+
+        """
         super().__init__()
-        # self.image = image
+
         self.image = np.pad(image, pad_width = [(400, 400), (400, 400), (0, 0)], mode='mean') # pad image to avoid overflow, intuitively padding with mean value will work best with Otsu's
 
-        self.title = title
+        self.title = title # our image title (slide name, i.e)
         self.params = params
 
+        # store identified bounding rects here
         self.rects: list[MatLike | None] = []
-        self.cropped_sections: list[tuple[int, int, int, int] | None] = []
+
+        # store the actual cropped section images here
+        self.cropped_sections: list[np.ndarray | None] = []
 
         # for drawing, dragging bounding rects
         self.rect = None
         self.start_x = None
         self.start_y = None
-        self.current_rect_id = None
 
         # for closeEvent
         self.cropped_display = None
@@ -188,6 +195,7 @@ class CropWindow(qtw.QWidget):
         self.select_sections_button.setToolTip("HELLO")
         self.select_sections_button.clicked.connect(self.open_cropped_display)
 
+        # layouts
         lt = qtw.QGridLayout()
         lt.addWidget(self.canvas, 1, 0)
         lt.addWidget(self.process_button, 0, 0)
@@ -201,30 +209,35 @@ class CropWindow(qtw.QWidget):
         self.setLayout(lt)
 
     def draw_rects_to_canvas(self) -> None:
+        """refreshes canvas with new processed image"""
         image_with_rects = draw_rects(self.image, self.rects, self.params)
         self.canvas.ax.clear()
         self.canvas.ax.imshow(image_with_rects)
         self.canvas.draw()
 
     def apply_threshold(self) -> None:
+        """generate (x1, y1, x2, y2) coordinates based on algorithmically detected objects, then draw to canvas"""
         log("process button clicked")
         self.rects = generate_crop_rects(self.image, self.params)
         self.draw_rects_to_canvas()
 
     def open_cropped_display(self) -> None:
+        """opens subplots display for cropped sections"""
         log("crop button clicked")
         try:
             idxs = self.section_input.text()
             log(idxs)
             idxs = idxs.split(",")
             idxs = [int(i.strip()) for i in idxs]
-        except ValueError as e:
+        except Exception as e:
             log("failed to parse index entry {}".format(self.section_input.text()))
+            error_box(self, str(e), "failed to parse index entry")
 
         try:
             self.cropped_sections = get_cropped_images(self.image, idxs, self.rects)
         except IndexError as e:
             log("invalid index provided: {}".format(str(e)))
+            error_box(self, str(e), "failed to crop based on provided index")
 
         # TODO: code the cropped images display subwindow
         # This subwindow should have a MplCanvas widget with n subplots as columns,
@@ -233,6 +246,7 @@ class CropWindow(qtw.QWidget):
         self.cropped_display.show()
 
     def on_press(self, event) -> None:
+        """called when mouse is pressed, to initiate drawing a rectangle"""
         log(str(event))
         # event.inaxes is the Axes instance over which the mouse is -- https://matplotlib.org/stable/users/explain/figure/event_handling.html
         if event.inaxes is not None:
@@ -248,6 +262,7 @@ class CropWindow(qtw.QWidget):
             self.canvas.draw()
 
     def on_motion(self, event) -> None:
+        """continue drawing rectangle for mouse motion"""
         log(str(event))
         if self.rect is not None and event.inaxes is not None:
             x_init, y_init = self.rect.xy
@@ -256,6 +271,7 @@ class CropWindow(qtw.QWidget):
             self.canvas.draw()
 
     def on_release(self, event) -> None:
+        """when mouse is released, append rectangle to self.rects"""
         log(str(event))
         if self.rect is not None:
             # new rect in the form (x1, y1, x2, y2)

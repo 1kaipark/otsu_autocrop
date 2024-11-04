@@ -1,4 +1,5 @@
 from shared.crop_window import CropWindow
+from shared.settings_panel import SettingsPanel
 from shared.image_crop_utils import load_img_array
 from shared.modal import *
 
@@ -16,6 +17,7 @@ matplotlib.use("QtAgg")
 
 class AutocropFileViewer(qtw.QWidget):
     def __init__(self) -> None:
+        """launcher class, this is a window with a treeview for image files."""
         super().__init__()
 
         self.image_paths: list[str | None] = []
@@ -100,11 +102,19 @@ class AutocropFileViewer(qtw.QWidget):
                 self.tree.clear()
                 self.image_paths = []
 
-    def open_settings(self) -> None: ...
+    def open_settings(self) -> None: 
+        self.settings_panel = SettingsPanel('params.json', self.refresh_settings)
+        self.settings_panel.show()
+    
+    def refresh_settings(self) -> None:
+        with open("params.json", "r") as h:
+            self.params = json.load(h)
 
     def closeEvent(self, event) -> None:
         if self.crop_window:
             self.crop_window.close()
+        if self.settings_panel:
+            self.settings_panel.close()
 
 
 if __name__ == "__main__":
