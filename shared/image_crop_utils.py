@@ -51,9 +51,21 @@ def dilate(img: np.ndarray, iterations: int = 2, kernel_size: int = 3) -> np.nda
     return img
 
 
-def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLike"]:
-    blank: np.ndarray = image.copy()
-    image = cv.cvtColor(image, cv.COLOR_RGB2GRAY)
+def _generate_thresholded_image(image: np.ndarray, params: dict = params) -> np.ndarray:
+    """
+    runs source image through:
+    ----
+    * `cv.GaussianBlur`
+    * dilation
+    * erosion
+    * thresholding (`cv.threshold` with Otsu's method)
+    """
+
+    # blank: np.ndarray = image.copy()
+    # if not greyscale already -- convert to grey
+    if image.ndim == 3:
+        image = cv.cvtColor(image, cv.COLOR_RGB2GRAY)
+    
     image = cv.GaussianBlur(
         image, ksize=(params["blur_kernel_dim"], params["blur_kernel_dim"]), sigmaX=0
     )
@@ -73,6 +85,11 @@ def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLi
     # to this day I have no idea what the first item cv.threshold returns is
     _, thresh = cv.threshold(image, params["thresh"], 255, cv.THRESH_OTSU)
 
+    return thresh
+
+def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLike"]:
+    thresh = _generate_thresholded_image(image, params)
+
     # hierarchy might be useful at some point but not now
     contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
@@ -81,7 +98,7 @@ def generate_crop_rects(image: np.ndarray, params: dict = params) -> list["MatLi
     # I love list comprehension
     hulls: list["MatLike"] = [cv.convexHull(c) for c in contours]
 
-    rects: list["Rect"] = [cv.boundingRect(c) for c in contours]
+    rects: list["Rect"] = [cv.boundingRect(h) for h in hulls]
     rects = [xywh_to_cornerpts(rect) for rect in rects]
     rects = [pad_rect(rect, params['pad']) for rect in rects]
     # doing inline returns gives me bad vibes tbh

@@ -146,8 +146,13 @@ class CropWindow(qtw.QWidget):
 
         """
         super().__init__()
-
-        self.image = np.pad(image, pad_width = [(400, 400), (400, 400), (0, 0)], mode='mean') # pad image to avoid overflow, intuitively padding with mean value will work best with Otsu's
+        if image.ndim == 3:
+            self.image = np.pad(image, pad_width = [(400, 400), (400, 400), (0, 0)], mode='mean') # pad image to avoid overflow, intuitively padding with mean value will work best with Otsu's
+        elif image.ndim == 2:
+            self.image = np.pad(image, pad_width = [(400, 400), (400, 400)], mode='mean')
+        else:
+            log("invaild image presented")
+            error_box(self, "image.ndim must be 2 or 3", "ermmm")
 
         self.title = title # our image title (slide name, i.e)
         self.params = params
