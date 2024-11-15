@@ -14,7 +14,7 @@ from PySide6 import QtWidgets as qtw, QtGui as qtg, QtCore as qtc
 
 import matplotlib
 
-matplotlib.use("QtAgg")
+matplotlib.use("qtagg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 import matplotlib.pyplot as plt
@@ -44,12 +44,30 @@ import os
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, parent=None, nrows=1, ncols=1, width=5, height=4, **kwargs):
         self.f, self.ax = plt.subplots(nrows, ncols, figsize=(width, height), **kwargs)
-        self.f.tight_layout()
-
+        self.no_axes()
+        
         super(MplCanvas, self).__init__(self.f)
 
         if parent:
             self.setParent(parent)
+
+    def no_axes(self):
+        # handle removing axes for a single plot or subplots
+        if isinstance(self.ax, np.ndarray):
+            for a in self.ax.flat:
+                a.axis('off')
+            self.f.tight_layout(pad=0.8)
+        else:
+            self.ax.axis('off')
+
+            self.f.tight_layout(pad=0.1)
+
+        # self.f.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+
+    def refresh(self):
+        self.draw_idle()
+        self.no_axes()
+
 
 
 class CroppedImagesView(qtw.QWidget):
@@ -61,13 +79,15 @@ class CroppedImagesView(qtw.QWidget):
         self.initUi()
 
     def initUi(self) -> None:
-        self.setFixedSize(qtc.QSize(100*len(self.images), 400))
         if len(self.images) % 3 == 0:
             ncols = min(len(self.images), 3)
             nrows = (len(self.images) + ncols - 1) // ncols
         else:
             ncols = len(self.images)
             nrows = 1
+
+        self.setFixedSize(qtc.QSize(200*ncols, 250*nrows))
+
         self.canvas = MplCanvas(
             parent=self,
             nrows=nrows,
@@ -167,9 +187,18 @@ class CropWindow(qtw.QWidget):
         self.rect = None
         self.start_x = None
         self.start_y = None
+        self.bg = None # this will store a buffer of the image for blitting
+
+        # https://stackoverflow.com/questions/72732294/can-i-change-the-rate-at-which-matplotlib-updates-the-motion-notify-event-even
+        # only update drawing every n events
+        self._n_motion_events = 0
 
         # for closeEvent
         self.cropped_display = None
+
+        # for pseudo undo redo actions
+
+        self._recently_removed = None
 
         self.initUi()
 
@@ -200,8 +229,24 @@ class CropWindow(qtw.QWidget):
         self.select_sections_button.setToolTip("HELLO")
         self.select_sections_button.clicked.connect(self.open_cropped_display)
 
+        # menu bar to undo, redo
+        menubar = qtw.QMenuBar(self)
+        edit_menu = menubar.addMenu("edit")
+
+        undo_action = qtg.QAction("undo", self)
+        undo_action.setShortcut("Ctrl+Z")
+        undo_action.triggered.connect(self.delete_last_rect)
+
+        redo_action = qtg.QAction("redo", self)
+        redo_action.setShortcut("Ctrl+Shift+Z")
+        redo_action.triggered.connect(self.restore_last_rect)
+
+        edit_menu.addAction(undo_action)
+        edit_menu.addAction(redo_action)
+
         # layouts
         lt = qtw.QGridLayout()
+        lt.setMenuBar(menubar)
         lt.addWidget(self.canvas, 1, 0)
         lt.addWidget(self.process_button, 0, 0)
 
@@ -213,12 +258,15 @@ class CropWindow(qtw.QWidget):
 
         self.setLayout(lt)
 
+
+
+
     def draw_rects_to_canvas(self) -> None:
         """refreshes canvas with new processed image"""
         image_with_rects = draw_rects(self.image, self.rects, self.params)
         self.canvas.ax.clear()
         self.canvas.ax.imshow(image_with_rects)
-        self.canvas.draw()
+        self.canvas.refresh()
 
     def apply_threshold(self) -> None:
         """generate (x1, y1, x2, y2) coordinates based on algorithmically detected objects, then draw to canvas"""
@@ -252,7 +300,6 @@ class CropWindow(qtw.QWidget):
 
     def on_press(self, event) -> None:
         """called when mouse is pressed, to initiate drawing a rectangle"""
-        log(str(event))
         # event.inaxes is the Axes instance over which the mouse is -- https://matplotlib.org/stable/users/explain/figure/event_handling.html
         if event.inaxes is not None:
             self.start_x, self.start_y = event.xdata, event.ydata
@@ -260,24 +307,36 @@ class CropWindow(qtw.QWidget):
                 xy=(self.start_x, self.start_y),
                 width=0,
                 height=0,
-                fill=False,
-                edgecolor="pink",
+                fill=True,
+                facecolor="blue",
+                alpha=0.2,
             )
             event.inaxes.add_patch(self.rect)
-            self.canvas.draw()
+            # self.canvas.blit(self.canvas.ax.bbox)
+
+        # since we're gonna be drawing, save to the buffer now
+        self.bg = self.canvas.copy_from_bbox(self.canvas.f.bbox)
+
+
 
     def on_motion(self, event) -> None:
         """continue drawing rectangle for mouse motion"""
-        log(str(event))
-        if self.rect is not None and event.inaxes is not None:
-            x_init, y_init = self.rect.xy
-            self.rect.set_width(event.xdata - x_init)
-            self.rect.set_height(event.ydata - y_init)
-            self.canvas.draw()
+        self._n_motion_events += 1
+        if self._n_motion_events >= 5:
+            self._n_motion_events = 0
+        # https://matplotlib.org/stable/users/explain/animations/blitting.html
+            # self.canvas.refresh()
+            if self.rect is not None and event.inaxes is not None:
+                self.canvas.restore_region(self.bg)
+                x_init, y_init = self.rect.xy
+                self.rect.set_width(event.xdata - x_init)
+                self.rect.set_height(event.ydata - y_init)
+                self.canvas.f.draw_artist(self.rect)
+                self.canvas.blit(self.rect.clipbox)
+
 
     def on_release(self, event) -> None:
         """when mouse is released, append rectangle to self.rects"""
-        log(str(event))
         if self.rect is not None:
             # new rect in the form (x1, y1, x2, y2)
             new_rect = (
@@ -290,11 +349,26 @@ class CropWindow(qtw.QWidget):
 
             # int everything
             new_rect = tuple([int(c) for c in new_rect])
-
+            print(new_rect)
             self.rect = None
 
             self.rects.append(new_rect)
             self.draw_rects_to_canvas()
+
+            self.bg = None # reset bg buffer
+
+    def delete_last_rect(self) -> None:
+        """remove last entry in self.rects and store in buffer"""
+        self._recently_removed = self.rects.pop(-1)
+        self.draw_rects_to_canvas()
+
+    def restore_last_rect(self) -> None:
+        """restore from buffer"""
+        if self._recently_removed is not None:
+            self.rects.append(self._recently_removed)
+            self._recently_removed = None 
+            self.draw_rects_to_canvas()
+
 
     def closeEvent(self, event) -> None:
         if self.cropped_display:

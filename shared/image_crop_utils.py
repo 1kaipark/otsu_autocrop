@@ -13,15 +13,25 @@ params: dict = {
     "morph_kernel_dim": 6,
     "thresh": 0,
     "pad": 50,
+    "n_sections": 6
 }
 
 # This will convert rects of the form (x, y, w, h) to (x1, y1, x2, y2)
-xywh_to_cornerpts = lambda rect: (
-    rect[0],
-    rect[1],
-    (rect[0] + rect[2]),
-    (rect[1] + rect[3]),
-)
+# xywh_to_cornerpts = lambda rect: (
+#     rect[0],
+#     rect[1],
+#     (rect[0] + rect[2]),
+#     (rect[1] + rect[3]),
+# )
+
+def xywh_to_cornerpts(rect: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    x, y, w, h = rect 
+    x1, y1 = x, y 
+    x2, y2 = x+w, y+h
+
+    # ensure x1, y1 is less than x2, y2
+    return min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)
+
 
 pad_rect = lambda rect, pad: (
     rect[0] - pad,
