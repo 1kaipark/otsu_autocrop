@@ -21,7 +21,7 @@ python otsu_autocrop.py
 * Double click to open any image from the tree view. Only one image can be opened at a time. 
 * Click "process image" to apply the object detection algorithm.
 * If the algorithm fails to detect any sections or regions of interest, you can manually click and drag rectangles.
-  * Start from the **top-left corner**, click and drag the new rectangle to the bottom right corner. Due to the use of `matplotlib` here, the input lag is high and you have to be deliberate with your inputs.
+  * for mistaken entries, there is a pseudo-undo/redo operation that simply removes the latest rectangle.
 * Once all regions are identified, input their corresponding indices in the order you wish, from left to right, into the entry field below. Then, click "select sections".
 * Once the section view has opened, if desired, click "rotate" for a 90-degree clockwise rotation. Then, hit "save images" and browse to a directory of your choice to write the images to disk.
 * Repeat for remaining images.
@@ -39,6 +39,13 @@ python otsu_autocrop.py
   * `morph_kernel_dim`: the size (nxn) of the kernels used for erosion and dilation
   * `thresh`: chosen arbitrarily as a starting point as the Otsu method algorithm finds an ideal value in an unsupervised fashion
   * `pad`: number of pixels to pad each identified rectangle with. For low-contrast images, increasing may help.
+
+
+# CHANGELOG:
+  * 2024-11-15:
+    * support for draggable rects from any corner -- no longer just top left
+    * uses `blit` for less input lag when drawing rectangles
+    * undo and redo
 
 # TODO:
 * better handling for overwrites
