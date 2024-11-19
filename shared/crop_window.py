@@ -7,6 +7,7 @@ TODO:
     じしf_,)ノ  
 """
 
+from typing import Callable
 import matplotlib.patches
 import numpy as np
 
@@ -56,10 +57,8 @@ class MplCanvas(FigureCanvasQTAgg):
         if isinstance(self.ax, np.ndarray):
             for a in self.ax.flat:
                 a.axis('off')
-            self.f.tight_layout(pad=0.8)
         else:
             self.ax.axis('off')
-
             self.f.tight_layout(pad=0.1)
 
         # self.f.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
@@ -98,23 +97,42 @@ class CroppedImagesView(qtw.QWidget):
         )
         self._draw()
 
-        self.rotate_button = qtw.QPushButton("rotate")
-        self.rotate_button.setToolTip(
-            "90 degree clockwise rotation of all cropped sections"
-        )
-        self.rotate_button.clicked.connect(self.rotate_images)
-
         self.save_button = qtw.QPushButton("save images")
         self.save_button.clicked.connect(self.save_images)
 
         lt = qtw.QGridLayout()
         lt.addWidget(self.canvas, 0, 0)
 
-        buttons_lt = qtw.QHBoxLayout()
-        buttons_lt.addWidget(self.rotate_button)
-        buttons_lt.addWidget(self.save_button)
 
-        lt.addLayout(buttons_lt, 1, 0)
+        # rotate panel
+        rotate_lt = qtw.QHBoxLayout()
+        self.rotate_section_input = qtw.QLineEdit()
+        self.rotate_section_input.setPlaceholderText("enter section numbers to rotate, separated by commas")
+        self.rotate_section_input.setToolTip("leave blank for all")
+
+        self.rotate_section_button = qtw.QPushButton("rotate")
+        self.rotate_section_input.setToolTip("performs 90 degree clockwise rotation on selected sections")
+        self.rotate_section_button.clicked.connect(self.rotate_sections)
+
+        rotate_lt.addWidget(self.rotate_section_input)
+        rotate_lt.addWidget(self.rotate_section_button)
+
+        # horizontal flip
+        hflip_lt = qtw.QHBoxLayout()
+        self.hflp_section_input = qtw.QLineEdit()
+        self.hflp_section_input.setPlaceholderText("enter section numbers to flip horizontally (or leave blank for all)")
+        self.hflp_section_input.setToolTip("leave blank for all")
+        
+        self.hflip_section_button = qtw.QPushButton("flip horizontal")
+        self.hflp_section_input.setToolTip("performs horizontal flip on selected sections")
+        self.hflip_section_button.clicked.connect(self.hflip_sections)
+
+        hflip_lt.addWidget(self.hflp_section_input)
+        hflip_lt.addWidget(self.hflip_section_button)
+
+        lt.addLayout(rotate_lt, 1, 0)
+        lt.addLayout(hflip_lt, 2, 0)
+        lt.addWidget(self.save_button, 3, 0)
 
         self.setLayout(lt)
 
@@ -128,11 +146,33 @@ class CroppedImagesView(qtw.QWidget):
                 ax.set_title(f"section_{str(i+1).zfill(3)}")  # zfill to pad with zeros
         self.canvas.draw()
 
-    def rotate_images(self) -> None:
-        if len(self.images) == 0:
-            return
-        self.images = [cv.rotate(img, cv.ROTATE_90_CLOCKWISE) for img in self.images]
+    def rotate_sections(self) -> None: 
+        try:
+            idxs = self.rotate_section_input.text()
+            log(idxs)
+            idxs = idxs.split(",")
+            idxs = [int(i.strip()) - 1 for i in idxs]
+        except Exception as e:
+            log("failed to parse index entry {}".format(self.rotate_section_input.text()))
+            idxs = [i for i in range(len(self.images))]
+
+        for i in idxs:
+            self.images[i] = cv.rotate(self.images[i], cv.ROTATE_90_CLOCKWISE)
         self._draw()
+
+    def hflip_sections(self) -> None:
+        try:
+            idxs = self.hflp_section_input.text()
+            log(idxs)
+            idxs = idxs.split(",")
+            idxs = [int(i.strip()) - 1 for i in idxs]
+        except Exception as e:
+            log("failed to parse index entry {}".format(self.hflp_section_input.text()))
+            idxs = [i for i in range(len(self.images))]
+
+        for i in idxs:
+            self.images[i] = cv.flip(self.images[i], 1) # 1 = horizontal flip
+        self._draw() 
 
     def save_images(self) -> None:
         save_dir = qtw.QFileDialog.getExistingDirectory(
@@ -156,6 +196,7 @@ class CroppedImagesView(qtw.QWidget):
 
         except Exception as e:
             log(str(e))
+
 
 
 class CropWindow(qtw.QWidget):
@@ -284,7 +325,7 @@ class CropWindow(qtw.QWidget):
             idxs = [int(i.strip()) for i in idxs]
         except Exception as e:
             log("failed to parse index entry {}".format(self.section_input.text()))
-            error_box(self, str(e), "failed to parse index entry")
+            idxs = [i for i in range(len(self.rects))]
 
         try:
             self.cropped_sections = get_cropped_images(self.image, idxs, self.rects)
