@@ -57,6 +57,7 @@ class MplCanvas(FigureCanvasQTAgg):
         if isinstance(self.ax, np.ndarray):
             for a in self.ax.flat:
                 a.axis('off')
+                self.f.tight_layout()
         else:
             self.ax.axis('off')
             self.f.tight_layout(pad=0.1)
@@ -85,14 +86,14 @@ class CroppedImagesView(qtw.QWidget):
             ncols = len(self.images)
             nrows = 1
 
-        self.setFixedSize(qtc.QSize(200*ncols, 250*nrows))
+        self.setFixedSize(qtc.QSize(250*ncols, 350*nrows))
 
         self.canvas = MplCanvas(
             parent=self,
             nrows=nrows,
             ncols=ncols,
-            width=8 * len(self.images),
-            height=6,
+            width=12 * len(self.images),
+            height=10,
             dpi=100,
         )
         self._draw()
