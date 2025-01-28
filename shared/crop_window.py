@@ -94,8 +94,8 @@ class CroppedImagesView(qtw.QWidget):
         self.rotate_custom_cw_button.setToolTip("performs custom degree clockwise rotation on selected sections")
         self.rotate_custom_cw_button.clicked.connect(self.rotate_custom_cw)
 
-        self.rotate_custom_ccw_button = qtw.QPushButton(f"{self.params['deg_rot']}° cw")
-        self.rotate_custom_ccw_button.setToolTip("performs custom degree clockwise rotation on selected sections")
+        self.rotate_custom_ccw_button = qtw.QPushButton(f"{self.params['deg_rot']}° ccw")
+        self.rotate_custom_ccw_button.setToolTip("performs custom degree counterclockwise rotation on selected sections")
         self.rotate_custom_ccw_button.clicked.connect(self.rotate_custom_ccw)
 
         rotate_lt.addWidget(self.rotate_custom_ccw_button)
