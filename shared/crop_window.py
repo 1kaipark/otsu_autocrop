@@ -44,10 +44,12 @@ import gc
 
 
 class CroppedImagesView(qtw.QWidget):
-    def __init__(self, images: list[np.array], title: str = "") -> None:
+    def __init__(self, images: list[np.array], title: str = "", params: dict = DEFAULT_PARAMS) -> None:
         super().__init__()
         self.images = images
         self.title = title
+
+        self.params = params
 
         self.initUi()
 
@@ -88,17 +90,17 @@ class CroppedImagesView(qtw.QWidget):
         self.rotate_90_cw_button.setToolTip("performs 90 degree clockwise rotation on selected sections")
         self.rotate_90_cw_button.clicked.connect(self.rotate_90_cw)
 
-        self.rotate_5_cw_button = qtw.QPushButton("5° CW")
-        self.rotate_5_cw_button.setToolTip("performs 5 degree clockwise rotation on selected sections")
-        self.rotate_5_cw_button.clicked.connect(self.rotate_5_cw)
+        self.rotate_custom_cw_button = qtw.QPushButton(f"{self.params['deg_rot']}° cw")
+        self.rotate_custom_cw_button.setToolTip("performs custom degree clockwise rotation on selected sections")
+        self.rotate_custom_cw_button.clicked.connect(self.rotate_custom_cw)
 
-        self.rotate_5_ccw_button = qtw.QPushButton("5° CCW")
-        self.rotate_5_ccw_button.setToolTip("performs 5 degree clockwise rotation on selected sections")
-        self.rotate_5_ccw_button.clicked.connect(self.rotate_5_ccw)
+        self.rotate_custom_ccw_button = qtw.QPushButton(f"{self.params['deg_rot']}° cw")
+        self.rotate_custom_ccw_button.setToolTip("performs custom degree clockwise rotation on selected sections")
+        self.rotate_custom_ccw_button.clicked.connect(self.rotate_custom_ccw)
 
-        rotate_lt.addWidget(self.rotate_5_ccw_button)
+        rotate_lt.addWidget(self.rotate_custom_ccw_button)
         rotate_lt.addWidget(self.rotate_section_input)
-        rotate_lt.addWidget(self.rotate_5_cw_button)
+        rotate_lt.addWidget(self.rotate_custom_cw_button)
         rotate_lt.addWidget(self.rotate_90_cw_button)
 
         # horizontal flip
@@ -144,7 +146,7 @@ class CroppedImagesView(qtw.QWidget):
             self.images[i] = cv.rotate(self.images[i], cv.ROTATE_90_CLOCKWISE)
         self._draw()
 
-    def rotate_5_cw(self) -> None: 
+    def rotate_custom_cw(self) -> None: 
         #         print("rotating 5 degrees clockwise")
         try:
             idxs = self.rotate_section_input.text()
@@ -156,10 +158,10 @@ class CroppedImagesView(qtw.QWidget):
             idxs = [i for i in range(len(self.images))]
 
         for i in idxs:
-            self.images[i] = rotate_image(self.images[i], -5) # you would think that negatives are CCW but i can't be bothered to change the implementation xd
+            self.images[i] = rotate_image(self.images[i], -1*self.params['deg_rot']) # you would think that negatives are CCW but i can't be bothered to change the implementation xd
         self._draw()
 
-    def rotate_5_ccw(self) -> None: 
+    def rotate_custom_ccw(self) -> None: 
         try:
             idxs = self.rotate_section_input.text()
             log(idxs)
@@ -170,7 +172,7 @@ class CroppedImagesView(qtw.QWidget):
             idxs = [i for i in range(len(self.images))]
 
         for i in idxs:
-            self.images[i] = rotate_image(self.images[i], 5)
+            self.images[i] = rotate_image(self.images[i], self.params['deg_rot'])
         self._draw()
 
     def hflip_sections(self) -> None:
@@ -355,7 +357,7 @@ class CropWindow(qtw.QWidget):
         # TODO: code the cropped images display subwindow
         # This subwindow should have a MplCanvas widget with n subplots as columns,
         # a "rotate" button that rotates 90 deg CW, and a "save" button
-        self.cropped_display = CroppedImagesView(self.cropped_sections, self.title)
+        self.cropped_display = CroppedImagesView(self.cropped_sections, self.title, self.params)
         self.cropped_display.show()
 
     def on_press(self, event) -> None:
