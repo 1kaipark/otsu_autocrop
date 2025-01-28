@@ -13,7 +13,8 @@ params: dict = {
     "morph_kernel_dim": 6,
     "thresh": 0,
     "pad": 50,
-    "n_sections": 6
+    "n_sections": 6,
+    "deg_rot": 5,
 }
 
 # This will convert rects of the form (x, y, w, h) to (x1, y1, x2, y2)
@@ -161,3 +162,23 @@ def get_cropped_images(
     selected = [rects[n] for n in idxs]
     cropped = [crop_rect(src, rect) for rect in selected]
     return cropped
+
+
+# https://becominghuman.ai/how-to-automatically-deskew-straighten-a-text-image-using-opencv-a0c30aed83df
+def rotate_image(image: np.ndarray, angle: float) -> np.ndarray:
+    img = image.copy()
+    (h, w) = image.shape[:2]
+    center = (w//2, h//2)
+
+    M = cv.getRotationMatrix2D(center, angle, 1.0)
+    print(M)
+
+    rotated = cv.warpAffine(
+        src=img,
+        M=M,
+        dsize=(w, h),
+        flags=cv.INTER_CUBIC,
+        borderMode=cv.BORDER_REPLICATE
+    )
+
+    return rotated 

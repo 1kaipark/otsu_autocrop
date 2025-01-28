@@ -16,9 +16,7 @@ from PySide6 import QtWidgets as qtw, QtGui as qtg, QtCore as qtc
 import matplotlib
 
 matplotlib.use("qtagg")
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
-import matplotlib.pyplot as plt
 
 # from img_crop_utils import load_img_array
 from .image_crop_utils import (
@@ -27,11 +25,12 @@ from .image_crop_utils import (
     draw_rects,
     xywh_to_cornerpts,
     get_cropped_images,
+    rotate_image,
     params as DEFAULT_PARAMS,
 )
 
 from .modal import *
-
+from .mpl_canvas import MplCanvas
 from shared.logger import log
 
 import cv2 as cv
@@ -41,33 +40,7 @@ from PIL import Image
 
 import os
 
-
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, nrows=1, ncols=1, width=5, height=4, **kwargs):
-        self.f, self.ax = plt.subplots(nrows, ncols, figsize=(width, height), **kwargs)
-        self.no_axes()
-        
-        super(MplCanvas, self).__init__(self.f)
-
-        if parent:
-            self.setParent(parent)
-
-    def no_axes(self):
-        # handle removing axes for a single plot or subplots
-        if isinstance(self.ax, np.ndarray):
-            for a in self.ax.flat:
-                a.axis('off')
-                self.f.tight_layout()
-        else:
-            self.ax.axis('off')
-            self.f.tight_layout(pad=0.1)
-
-        # self.f.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
-
-    def refresh(self):
-        self.draw_idle()
-        self.no_axes()
-
+import gc 
 
 
 class CroppedImagesView(qtw.QWidget):
@@ -111,12 +84,22 @@ class CroppedImagesView(qtw.QWidget):
         self.rotate_section_input.setPlaceholderText("enter section numbers to rotate, separated by commas")
         self.rotate_section_input.setToolTip("leave blank for all")
 
-        self.rotate_section_button = qtw.QPushButton("rotate")
-        self.rotate_section_input.setToolTip("performs 90 degree clockwise rotation on selected sections")
-        self.rotate_section_button.clicked.connect(self.rotate_sections)
+        self.rotate_90_cw_button = qtw.QPushButton("90° CW")
+        self.rotate_90_cw_button.setToolTip("performs 90 degree clockwise rotation on selected sections")
+        self.rotate_90_cw_button.clicked.connect(self.rotate_90_cw)
 
+        self.rotate_5_cw_button = qtw.QPushButton("5° CW")
+        self.rotate_5_cw_button.setToolTip("performs 5 degree clockwise rotation on selected sections")
+        self.rotate_5_cw_button.clicked.connect(self.rotate_5_cw)
+
+        self.rotate_5_ccw_button = qtw.QPushButton("5° CCW")
+        self.rotate_5_ccw_button.setToolTip("performs 5 degree clockwise rotation on selected sections")
+        self.rotate_5_ccw_button.clicked.connect(self.rotate_5_ccw)
+
+        rotate_lt.addWidget(self.rotate_5_ccw_button)
         rotate_lt.addWidget(self.rotate_section_input)
-        rotate_lt.addWidget(self.rotate_section_button)
+        rotate_lt.addWidget(self.rotate_5_cw_button)
+        rotate_lt.addWidget(self.rotate_90_cw_button)
 
         # horizontal flip
         hflip_lt = qtw.QHBoxLayout()
@@ -147,7 +130,7 @@ class CroppedImagesView(qtw.QWidget):
                 ax.set_title(f"section_{str(i+1).zfill(3)}")  # zfill to pad with zeros
         self.canvas.draw()
 
-    def rotate_sections(self) -> None: 
+    def rotate_90_cw(self) -> None: 
         try:
             idxs = self.rotate_section_input.text()
             log(idxs)
@@ -159,6 +142,35 @@ class CroppedImagesView(qtw.QWidget):
 
         for i in idxs:
             self.images[i] = cv.rotate(self.images[i], cv.ROTATE_90_CLOCKWISE)
+        self._draw()
+
+    def rotate_5_cw(self) -> None: 
+        #         print("rotating 5 degrees clockwise")
+        try:
+            idxs = self.rotate_section_input.text()
+            log(idxs)
+            idxs = idxs.split(",")
+            idxs = [int(i.strip()) - 1 for i in idxs]
+        except Exception as e:
+            log("failed to parse index entry {}".format(self.rotate_section_input.text()))
+            idxs = [i for i in range(len(self.images))]
+
+        for i in idxs:
+            self.images[i] = rotate_image(self.images[i], -5) # you would think that negatives are CCW but i can't be bothered to change the implementation xd
+        self._draw()
+
+    def rotate_5_ccw(self) -> None: 
+        try:
+            idxs = self.rotate_section_input.text()
+            log(idxs)
+            idxs = idxs.split(",")
+            idxs = [int(i.strip()) - 1 for i in idxs]
+        except Exception as e:
+            log("failed to parse index entry {}".format(self.rotate_section_input.text()))
+            idxs = [i for i in range(len(self.images))]
+
+        for i in idxs:
+            self.images[i] = rotate_image(self.images[i], 5)
         self._draw()
 
     def hflip_sections(self) -> None:
@@ -197,6 +209,12 @@ class CroppedImagesView(qtw.QWidget):
 
         except Exception as e:
             log(str(e))
+    
+    def closeEvent(self, event):
+        self.canvas.close()
+        del(self.images)
+        del(self.canvas)
+        gc.collect()
 
 
 
@@ -415,3 +433,7 @@ class CropWindow(qtw.QWidget):
     def closeEvent(self, event) -> None:
         if self.cropped_display:
             self.cropped_display.close()
+        self.canvas.close()
+        del(self.image)
+        del(self.cropped_sections)
+        gc.collect()
